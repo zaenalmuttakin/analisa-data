@@ -29,30 +29,11 @@ def create_sum_order_items_df(df):
 
     return sum_order_items_df
 
-def create_bystate_df(df):
-        bystate_df = df.groupby(by="customer_state").customer_id.nunique().reset_index()
-        bystate_df.rename(columns={
-            "customer_id": "customer_count"
-        }, inplace=True)
-        most_common_state = bystate_df.loc[bystate_df['customer_count'].idxmax(), 'customer_state']
-        bystate_df = bystate_df.sort_values(by='customer_count', ascending=False)
-
-        return bystate_df, most_common_state
-
-def create_rfm_df(df):
-    rfm_df = df.groupby(by="customer_id", as_index=False).agg({
-        "order_approved_at": "max", #mengambil tanggal order terakhir
-        "order_id": "nunique",
-        "payment_value": "sum"
-    })
-    rfm_df.columns = ["customer_id", "max_order_timestamp", "frequency", "monetary"]
-    
-    rfm_df["max_order_timestamp"] = rfm_df["max_order_timestamp"].dt.date
-    recent_date = df["order_approved_at"].dt.date.max()
-    rfm_df["recency"] = rfm_df["max_order_timestamp"].apply(lambda x: (recent_date - x).days)
-    rfm_df.drop("max_order_timestamp", axis=1, inplace=True)
-    
-    return rfm_df
+def analyze_purchase_dates(df, date_column):
+    purchase_dates = pd.to_datetime(df[date_column])
+    day_counts = purchase_dates.dt.day_name().value_counts().sort_values(ascending=False).head(7)
+    month_counts = purchase_dates.dt.month_name().value_counts().sort_values(ascending=False).head(5)
+    return day_counts, month_counts
 
 datetime_columns = ["order_approved_at", "order_delivered_customer_date"]
 all_df.sort_values(by="order_approved_at", inplace=True)
@@ -78,11 +59,13 @@ with st.sidebar:
 main_df = all_df[(all_df["order_approved_at"] >= str(start_date)) & 
                  (all_df["order_approved_at"] <= str(end_date))]
 
+#memanggil function
 daily_orders_df = create_daily_orders_df(main_df)
 sum_order_items_df = create_sum_order_items_df(main_df)
-bystate_df = create_bystate_df(main_df)
-rfm_df = create_rfm_df(main_df)
+day_counts, month_counts = analyze_purchase_dates(main_df, 'order_purchase_timestamp')
 
+
+#membuat view
 st.header('Dashboard Assessment Data Science :sparkles:')
 
 st.subheader('Daily Orders')
@@ -110,7 +93,7 @@ ax.tick_params(axis='x', labelsize=15)
  
 st.pyplot(fig)
 
-st.subheader("Product Yang Paling Banyak & Sedikit Terjual")
+st.subheader("Product Yang Paling Banyak & Sedikit Dibeli :sparkles:")
  
 fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(45, 25))
 
@@ -119,19 +102,45 @@ colors = ["#068DA9", "#D3D3D3", "#D3D3D3", "#D3D3D3", "#D3D3D3"]
 sns.barplot(x="product_count", y="product_category_name_english", data=sum_order_items_df.head(5), palette=colors, ax=ax[0])
 ax[0].set_ylabel(None)
 ax[0].set_xlabel("Number of Sales", fontsize=30)
-ax[0].set_title("Produk paling banyak terjual", loc="center", fontsize=50)
+ax[0].set_title("Produk paling banyak dibeli", loc="center", fontsize=50)
 ax[0].tick_params(axis ='y', labelsize=35)
 ax[0].tick_params(axis ='x', labelsize=30)
 
-sns.barplot(x="product_count", y="product_category_name_english", data=sum_order_items_df.sort_values(by="product_count", ascending=True).head(5), palette=colors, ax=ax[1])
+sns.barplot(x="product_count", y="product_category_name_english", data= sum_order_items_df.sort_values(by="product_count", ascending=True).head(5), palette=colors, ax=ax[1])
 ax[1].set_ylabel(None)
 ax[1].set_xlabel("Number of Sales", fontsize=30)
 ax[1].invert_xaxis()
 ax[1].yaxis.set_label_position("right")
 ax[1].yaxis.tick_right()
-ax[1].set_title("Produk paling sedikit terjual", loc="center", fontsize=50)
+ax[1].set_title("Produk paling sedikit dibeli", loc="center", fontsize=50)
 ax[1].tick_params(axis='y', labelsize=35)
 ax[1].tick_params(axis='x', labelsize=30)
  
 st.pyplot(fig)
- 
+
+st.subheader("Pembelian paling banyak dalam satu hari dan bulan :sparkles:")
+
+fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(45, 25))
+
+colors = ["#068DA9", "#D3D3D3", "#D3D3D3", "#D3D3D3", "#D3D3D3"]
+
+# Plot for daily purchases
+sns.barplot(x=day_counts.index, y=day_counts.values, palette=colors, ax=ax[0])
+ax[0].set_ylabel(None)
+ax[0].set_xlabel("Hari", fontsize=30)
+ax[0].set_title("Pembelian per hari", loc="center", fontsize=50)
+ax[0].tick_params(axis='y', labelsize=35)
+ax[0].tick_params(axis='x', labelsize=30)
+
+# Plot for monthly purchases
+sns.barplot(x=month_counts.index, y=month_counts.values, palette=colors, ax=ax[1])
+ax[1].set_ylabel(None)
+ax[1].set_xlabel("Bulan", fontsize=30)
+ax[1].invert_xaxis()
+ax[1].yaxis.set_label_position("right")
+ax[1].yaxis.tick_right()
+ax[1].set_title("Pembelian per bulan", loc="center", fontsize=50)
+ax[1].tick_params(axis='y', labelsize=35)
+ax[1].tick_params(axis='x', labelsize=30)
+
+st.pyplot(fig)
