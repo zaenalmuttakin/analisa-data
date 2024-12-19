@@ -122,7 +122,7 @@ st.subheader("Pembelian paling banyak dalam satu hari dan bulan :sparkles:")
 
 fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(45, 25))
 
-colors = ["#068DA9", "#D3D3D3", "#D3D3D3", "#D3D3D3", "#D3D3D3"]
+colors = ["#068DA9", "#D3D3D3", "#D3D3D3", "#D3D3D3", "#D3D3D3", "#D3D3D3", "#D3D3D3"]
 
 # Plot for daily purchases
 sns.barplot(x=day_counts.index, y=day_counts.values, palette=colors, ax=ax[0])
